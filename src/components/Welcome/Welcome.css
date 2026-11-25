@@ -1,0 +1,330 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+
+.welcome {
+  --wl-navy: #13294b;
+  --wl-green: #3ddc84;
+  --wl-green-text: #12a55a;
+  --wl-bg: #f2f8fc;
+  --wl-blue: #c4e1ff;
+  --wl-mint: #c2f5d4;
+  --wl-lilac: #dcd0ff;
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--wl-bg);
+  color: var(--wl-navy);
+}
+
+/* Top bar */
+.welcome-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 14px clamp(16px, 4vw, 56px);
+  background: var(--wl-navy);
+  color: #fff;
+}
+
+.welcome-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.welcome-logo {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 1.4rem;
+}
+
+.welcome-brand-accent {
+  color: var(--wl-green);
+}
+
+.welcome-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+}
+
+.welcome-link {
+  padding: 6px 2px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: none;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  cursor: pointer;
+  opacity: 0.92;
+}
+
+.welcome-link:hover {
+  opacity: 1;
+}
+
+.welcome-link.is-active {
+  border-bottom-color: var(--wl-green);
+}
+
+.welcome-signup {
+  padding: 9px 20px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wl-green);
+  color: var(--wl-navy);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Hero: copy on the left, photo on the right */
+/* The hero is a <main>, which App.css caps at 1280px and pads. Override both here.
+   The right padding matches the top bar, so the photo lines up with the "Sign up" button. */
+.welcome-hero {
+  flex: 1;
+  max-width: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 0 clamp(16px, 4vw, 56px) 0 0;
+}
+
+.welcome-copy {
+  position: relative;
+  z-index: 1;
+  padding: clamp(28px, 5vw, 72px) clamp(20px, 5vw, 64px);
+}
+
+.welcome-script {
+  margin: 0;
+  font-family: 'Dancing Script', 'Segoe Script', 'Brush Script MT', cursive;
+  font-weight: 700;
+  font-size: clamp(2.2rem, 4.8vw, 4rem);
+  line-height: 1.05;
+}
+
+.welcome-title {
+  margin: 0;
+  font-size: clamp(2.6rem, 5.2vw, 4.6rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.welcome-title span {
+  color: var(--wl-green-text);
+}
+
+.welcome-swoosh {
+  display: block;
+  width: min(560px, 92%);
+  height: auto;
+  margin: 6px 0 0 4px;
+  overflow: visible;
+}
+
+.welcome-swoosh path {
+  fill: none;
+  stroke: var(--wl-green);
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.welcome-sub {
+  max-width: 32ch;
+  margin: 22px 0 30px;
+  font-size: clamp(1.05rem, 1.7vw, 1.3rem);
+  line-height: 1.5;
+}
+
+.welcome-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 28px 16px 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--wl-navy);
+  color: #fff;
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 700;
+  box-shadow: 0 12px 26px rgba(19, 41, 75, 0.28);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.welcome-start:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(19, 41, 75, 0.34);
+}
+
+.welcome-start svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+.welcome-start .bars rect {
+  fill: currentColor;
+}
+
+.welcome-start .chevron {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Feature chips */
+.welcome-features {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 0;
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.welcome-feature {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.welcome-feature + .welcome-feature {
+  margin-left: 22px;
+  padding-left: 22px;
+  border-left: 1px solid #b9c7da;
+}
+
+.welcome-feature-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  font-size: 1.6rem;
+}
+
+.tone-blue .welcome-feature-icon {
+  background: var(--wl-blue);
+}
+
+.tone-green .welcome-feature-icon {
+  background: var(--wl-mint);
+}
+
+.tone-purple .welcome-feature-icon {
+  background: var(--wl-lilac);
+}
+
+/* Photo: cropped from the design, faded into the background on its left edge */
+.welcome-photo {
+  position: relative;
+  justify-self: end;
+  align-self: center;
+  width: clamp(280px, 29vw, 560px);
+  aspect-ratio: 576 / 762;
+  overflow: hidden;
+}
+
+.welcome-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+
+.welcome-photo::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 18%;
+  background: linear-gradient(to right, var(--wl-bg), rgba(242, 248, 252, 0));
+  pointer-events: none;
+}
+
+/* Wave that closes the page */
+.welcome-wave {
+  display: block;
+  width: 100%;
+  height: clamp(64px, 8vw, 112px);
+}
+
+.wave-green {
+  fill: var(--wl-green);
+}
+
+.wave-navy {
+  fill: var(--wl-navy);
+}
+
+@media (max-width: 860px) {
+  .welcome-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 0;
+  }
+
+  .welcome-photo {
+    justify-self: center;
+    align-self: auto;
+    width: min(calc(100% - 40px), 480px);
+    margin: 0 auto;
+  }
+
+  .welcome-photo::before {
+    display: none;
+  }
+
+  .welcome-feature + .welcome-feature {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .welcome-features {
+    gap: 16px 24px;
+  }
+}
+
+@media (max-width: 520px) {
+  .welcome-brand {
+    font-size: 1.25rem;
+  }
+
+  .welcome-feature-icon {
+    width: 52px;
+    height: 52px;
+    font-size: 1.35rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-start {
+    transition: none;
+  }
+}

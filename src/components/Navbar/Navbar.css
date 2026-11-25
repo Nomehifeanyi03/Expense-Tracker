@@ -1,0 +1,101 @@
+.logo {
+  width: 56px;
+  height: 52px;
+  border-radius: 14px;
+  background: #6d5ef0;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+}
+
+aside {
+  width: 240px;
+  flex: none;
+  background: var(--card);
+  border-right: 1px solid var(--line);
+  padding: 22px 14px;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+
+  @media (max-width: 800px) {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 12px;
+
+    & .sbrand {
+      display: none;
+    }
+  }
+}
+
+.sbrand {
+  text-align: center;
+  font-size: 22px;
+  line-height: 1.1;
+  margin-bottom: 22px;
+
+  & b {
+    display: block;
+  }
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  & button.on {
+    background: var(--br);
+    color: #fff;
+  }
+
+  @media (max-width: 800px) {
+    flex-direction: row;
+    overflow-x: auto;
+
+    & button {
+      width: auto;
+      white-space: nowrap;
+    }
+  }
+}
+
+.nav button,
+.foot button {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.foot {
+  margin-top: auto;
+
+  @media (max-width: 800px) {
+    display: none;
+  }
+}
+
+.tip {
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--brS);
+  color: var(--br);
+  text-align: center;
+  font-weight: 600;
+}
+
