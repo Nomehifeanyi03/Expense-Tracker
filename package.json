@@ -1,32 +1,27 @@
 {
-  "name": "expense-tracker",
-  "version": "1.0.0",
-  "description": "expense tracker project",
-  "main": "index.js",
+  "name": "expense-tracker-api",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
     "build": "vite build",
+    "lint": "eslint .",
     "preview": "vite preview"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Nomehifeanyi03/Expense-Tracker.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "bugs": {
-    "url": "https://github.com/Nomehifeanyi03/Expense-Tracker/issues"
-  },
-  "homepage": "https://github.com/Nomehifeanyi03/Expense-Tracker#readme",
   "dependencies": {
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.7.0",
-    "vite": "^5.4.21"
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.7",
+    "globals": "^17.13.0",
+    "vite": "^8.3.6"
   }
 }
