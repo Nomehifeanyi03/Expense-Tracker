@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Budget = require('../models/Budget');
 const Category = require('../models/Category');
 const Transaction = require('../models/Transaction');
+const { calculateCarryOvers } = require('../utils/rollover');
 
 const round2 = (n) => Math.round(n * 100) / 100;
 
@@ -69,14 +70,23 @@ exports.getBudgets = async (req, res) => {
 
     const budgets = await Budget.find({ user: req.user._id }).populate('category', 'name color');
 
-    const build = (budget, spent) => ({
-      _id: budget._id,
-      category: budget.category,
-      amount: budget.amount,
-      spent: round2(spent),
-      remaining: round2(budget.amount - spent),
-      percent: Math.round((spent / budget.amount) * 100),
-    });
+    const carry = await calculateCarryOvers(req.user, budgets, start);
+
+    const build = (budget, spent) => {
+      const carryOver = carry[budget._id.toString()] || 0;
+      const available = budget.amount + carryOver;
+
+      return {
+        _id: budget._id,
+        category: budget.category,
+        baseAmount: budget.amount,
+        carryOver: round2(carryOver),
+        amount: round2(available),
+        spent: round2(spent),
+        remaining: round2(available - spent),
+        percent: Math.round((spent / available) * 100),
+      };
+    };
 
     const overall = budgets.find((b) => !b.category);
     const categories = budgets
@@ -85,6 +95,7 @@ exports.getBudgets = async (req, res) => {
 
     res.json({
       month,
+      rollover: Boolean(req.user.rolloverEnabled),
       totalSpent: round2(totalSpent),
       overall: overall ? build(overall, totalSpent) : null,
       categories,

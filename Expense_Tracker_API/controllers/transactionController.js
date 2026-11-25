@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 const Transaction = require('../models/Transaction');
 const Category = require('../models/Category');
-
-const TYPES = ['expense', 'income'];
-const PAYMENT_METHODS = ['Cash', 'Card', 'Transfer', 'Mobile money'];
+const checkBudgetAlerts = require('../utils/checkBudgetAlerts');
+const { removeFile } = require('../utils/receiptFiles');
+const { parseRecurring } = require('../utils/recurrence');
+const { buildTransactionFilter, TYPES, PAYMENT_METHODS } = require('../utils/buildTransactionFilter');
 
 // Turns "work, lunch" or ["work", "lunch"] into a clean list of tags
 const parseTags = (tags) => {
@@ -11,9 +12,6 @@ const parseTags = (tags) => {
   const list = Array.isArray(tags) ? tags : String(tags).split(',');
   return [...new Set(list.map((t) => String(t).trim()).filter(Boolean))].slice(0, 10);
 };
-
-// Makes user-typed text safe to use inside a search pattern
-const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 // Create a transaction
 exports.createTransaction = async (req, res) => {
@@ -27,6 +25,7 @@ exports.createTransaction = async (req, res) => {
       description,
       notes,
       tags,
+      recurring,
     } = req.body;
 
     const amt = Number(amount);
@@ -46,6 +45,11 @@ exports.createTransaction = async (req, res) => {
       return res.status(400).json({ message: 'Invalid payment method' });
     }
 
+    const recurrence = parseRecurring(recurring, date);
+    if (recurrence.error) {
+      return res.status(400).json({ message: recurrence.error });
+    }
+
     const ownedCategory = await Category.findOne({ _id: category, user: req.user._id });
     if (!ownedCategory) {
       return res.status(400).json({ message: 'Category not found' });
@@ -61,7 +65,12 @@ exports.createTransaction = async (req, res) => {
       description,
       notes,
       tags: parseTags(tags),
+      recurring: recurrence.recurring,
     });
+
+    if (type === 'expense') {
+      await checkBudgetAlerts(req.user, ownedCategory._id, transaction.date);
+    }
 
     await transaction.populate('category', 'name color');
     res.status(201).json(transaction);
@@ -76,59 +85,9 @@ exports.createTransaction = async (req, res) => {
 // List transactions with filters, search and paging
 exports.getTransactions = async (req, res) => {
   try {
-    const { type, category, paymentMethod, startDate, endDate, minAmount, maxAmount, search } =
-      req.query;
-    const filter = { user: req.user._id };
-
-    if (type) {
-      if (!TYPES.includes(type)) return res.status(400).json({ message: 'Invalid type filter' });
-      filter.type = type;
-    }
-    if (category) {
-      if (!mongoose.isValidObjectId(category)) {
-        return res.status(400).json({ message: 'Invalid category filter' });
-      }
-      filter.category = category;
-    }
-    if (paymentMethod) {
-      if (!PAYMENT_METHODS.includes(paymentMethod)) {
-        return res.status(400).json({ message: 'Invalid payment method filter' });
-      }
-      filter.paymentMethod = paymentMethod;
-    }
-
-    if (startDate || endDate) {
-      filter.date = {};
-      if (startDate) {
-        const start = new Date(startDate);
-        if (isNaN(start)) return res.status(400).json({ message: 'Invalid start date' });
-        filter.date.$gte = start;
-      }
-      if (endDate) {
-        const end = new Date(endDate);
-        if (isNaN(end)) return res.status(400).json({ message: 'Invalid end date' });
-        end.setUTCHours(23, 59, 59, 999);
-        filter.date.$lte = end;
-      }
-    }
-
-    if (minAmount || maxAmount) {
-      filter.amount = {};
-      if (minAmount) {
-        const min = Number(minAmount);
-        if (Number.isNaN(min)) return res.status(400).json({ message: 'Invalid minimum amount' });
-        filter.amount.$gte = min;
-      }
-      if (maxAmount) {
-        const max = Number(maxAmount);
-        if (Number.isNaN(max)) return res.status(400).json({ message: 'Invalid maximum amount' });
-        filter.amount.$lte = max;
-      }
-    }
-
-    if (typeof search === 'string' && search.trim()) {
-      const pattern = new RegExp(escapeRegex(search.trim()), 'i');
-      filter.$or = [{ description: pattern }, { notes: pattern }, { tags: pattern }];
+    const { filter, error } = buildTransactionFilter(req.user._id, req.query);
+    if (error) {
+      return res.status(400).json({ message: error });
     }
 
     const page = Math.max(parseInt(req.query.page) || 1, 1);
@@ -184,7 +143,8 @@ exports.updateTransaction = async (req, res) => {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
-    const { type, amount, date, category, paymentMethod, description, notes, tags } = req.body;
+    const { type, amount, date, category, paymentMethod, description, notes, tags, recurring } =
+      req.body;
 
     if (type !== undefined) {
       if (!TYPES.includes(type)) {
@@ -225,7 +185,20 @@ exports.updateTransaction = async (req, res) => {
     if (notes !== undefined) transaction.notes = notes;
     if (tags !== undefined) transaction.tags = parseTags(tags);
 
+    if (recurring !== undefined) {
+      const recurrence = parseRecurring(recurring, transaction.date);
+      if (recurrence.error) {
+        return res.status(400).json({ message: recurrence.error });
+      }
+      transaction.recurring = recurrence.clear ? undefined : recurrence.recurring;
+    }
+
     await transaction.save();
+
+    if (transaction.type === 'expense') {
+      await checkBudgetAlerts(req.user, transaction.category, transaction.date);
+    }
+
     await transaction.populate('category', 'name color');
     res.json(transaction);
   } catch (error) {
@@ -249,7 +222,27 @@ exports.deleteTransaction = async (req, res) => {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
+    if (transaction.receipt && transaction.receipt.fileName) {
+      await removeFile(transaction.receipt.fileName);
+    }
+
     res.json({ message: 'Transaction deleted' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// List the entries that repeat (for a "manage repeats" screen)
+exports.getRecurring = async (req, res) => {
+  try {
+    const transactions = await Transaction.find({
+      user: req.user._id,
+      'recurring.frequency': { $exists: true, $ne: null },
+    })
+      .populate('category', 'name color')
+      .sort({ 'recurring.nextRunDate': 1 });
+
+    res.json(transactions);
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
