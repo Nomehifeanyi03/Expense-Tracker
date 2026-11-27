@@ -81,7 +81,7 @@ const checkBudgetAlerts = async (user, categoryId, date) => {
         user: user._id,
         type: reached ? "budget_reached" : "budget_warning",
         title: reached ? "Budget reached" : "Budget warning",
-        message: `${name} has used ${Math.round(percent)}% of its ${monthName} budget (${user.defaultCurrency} ${round2(spent)} of ${user.defaultCurrency} ${budget.amount}).`,
+        message: `${name} has used ${Math.round(percent)}% of its ${monthName} budget (${user.defaultCurrency} ${round2(spent)} of ${user.defaultCurrency} ${round2(available)}).`,
         category: isOverall ? null : budget.category,
         period,
       });

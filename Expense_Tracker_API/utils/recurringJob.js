@@ -10,7 +10,7 @@ let running = false;
 
 // Creates every copy that is due for one repeating entry
 const processTemplate = async (template, now) => {
-  const user = await User.findById(template.user).select('defaultCurrency');
+  const user = await User.findById(template.user).select('defaultCurrency rolloverEnabled');
   if (!user) return;
 
   const { frequency, endDate } = template.recurring;

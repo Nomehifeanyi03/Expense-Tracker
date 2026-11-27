@@ -1,6 +1,7 @@
-const Transaction = require('../models/Transaction');
-const Category = require('../models/Category');
-const Budget = require('../models/Budget');
+const Transaction = require("../models/Transaction");
+const Category = require("../models/Category");
+const Budget = require("../models/Budget");
+const { calculateCarryOvers } = require("../utils/rollover");
 
 const round2 = (n) => Math.round(n * 100) / 100;
 const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -8,24 +9,24 @@ const MONTH_REGEX = /^\d{4}-(0[1-9]|1[0-2])$/;
 // The current month as text, like "2026-11"
 const currentMonth = () => {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 };
 
 // The first moment of a month, moved forward or back by "offset" months
 const monthStart = (month, offset = 0) => {
-  const [year, mon] = month.split('-').map(Number);
+  const [year, mon] = month.split("-").map(Number);
   return new Date(Date.UTC(year, mon - 1 + offset, 1));
 };
 
 // Turns a date into text like "2026-11"
 const monthLabel = (date) =>
-  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
 
 // Adds up income and expenses between two dates
 const sumByType = async (userId, start, end) => {
   const rows = await Transaction.aggregate([
     { $match: { user: userId, date: { $gte: start, $lt: end } } },
-    { $group: { _id: '$type', total: { $sum: '$amount' } } },
+    { $group: { _id: "$type", total: { $sum: "$amount" } } },
   ]);
 
   const result = { income: 0, expense: 0 };
@@ -38,15 +39,21 @@ const sumByType = async (userId, start, end) => {
 // Adds up expenses per category between two dates (the pie chart data)
 const spendingByCategory = async (userId, start, end) => {
   const rows = await Transaction.aggregate([
-    { $match: { user: userId, type: 'expense', date: { $gte: start, $lt: end } } },
-    { $group: { _id: '$category', total: { $sum: '$amount' } } },
+    {
+      $match: {
+        user: userId,
+        type: "expense",
+        date: { $gte: start, $lt: end },
+      },
+    },
+    { $group: { _id: "$category", total: { $sum: "$amount" } } },
     { $sort: { total: -1 } },
   ]);
 
   const categories = await Category.find({
     _id: { $in: rows.map((row) => row._id) },
     user: userId,
-  }).select('name color');
+  }).select("name color");
 
   const lookup = {};
   categories.forEach((c) => {
@@ -70,7 +77,7 @@ exports.getDashboard = async (req, res) => {
   try {
     const month = req.query.month || currentMonth();
     if (!MONTH_REGEX.test(month)) {
-      return res.status(400).json({ message: 'Month must look like 2026-11' });
+      return res.status(400).json({ message: "Month must look like 2026-11" });
     }
 
     const start = monthStart(month);
@@ -80,18 +87,27 @@ exports.getDashboard = async (req, res) => {
       sumByType(req.user._id, start, end),
       spendingByCategory(req.user._id, start, end),
       Transaction.find({ user: req.user._id })
-        .populate('category', 'name color')
+        .populate("category", "name color")
         .sort({ date: -1, createdAt: -1 })
         .limit(5),
       Budget.findOne({ user: req.user._id, category: null }),
     ]);
 
+    const carry = overallBudget
+      ? await calculateCarryOvers(req.user, [overallBudget], start)
+      : {};
+    const available = overallBudget
+      ? overallBudget.amount + (carry[overallBudget._id.toString()] || 0)
+      : 0;
+
     const budget = overallBudget
       ? {
-          amount: overallBudget.amount,
+          baseAmount: overallBudget.amount,
+          carryOver: round2(available - overallBudget.amount),
+          amount: round2(available),
           spent: round2(totals.expense),
-          remaining: round2(overallBudget.amount - totals.expense),
-          percent: Math.round((totals.expense / overallBudget.amount) * 100),
+          remaining: round2(available - totals.expense),
+          percent: Math.round((totals.expense / available) * 100),
         }
       : null;
 
@@ -105,7 +121,7 @@ exports.getDashboard = async (req, res) => {
       recent,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -114,12 +130,12 @@ exports.getReports = async (req, res) => {
   try {
     const month = req.query.month || currentMonth();
     if (!MONTH_REGEX.test(month)) {
-      return res.status(400).json({ message: 'Month must look like 2026-11' });
+      return res.status(400).json({ message: "Month must look like 2026-11" });
     }
 
     const months = parseInt(req.query.months) || 1;
     if (![1, 3, 6, 12].includes(months)) {
-      return res.status(400).json({ message: 'Months must be 1, 3, 6 or 12' });
+      return res.status(400).json({ message: "Months must be 1, 3, 6 or 12" });
     }
 
     const start = monthStart(month, -(months - 1));
@@ -134,11 +150,17 @@ exports.getReports = async (req, res) => {
       sumByType(req.user._id, prevStart, start),
       spendingByCategory(req.user._id, start, end),
       Transaction.aggregate([
-        { $match: { user: req.user._id, date: { $gte: trendStart, $lt: end } } },
+        {
+          $match: { user: req.user._id, date: { $gte: trendStart, $lt: end } },
+        },
         {
           $group: {
-            _id: { year: { $year: '$date' }, month: { $month: '$date' }, type: '$type' },
-            total: { $sum: '$amount' },
+            _id: {
+              year: { $year: "$date" },
+              month: { $month: "$date" },
+              type: "$type",
+            },
+            total: { $sum: "$amount" },
           },
         },
       ]),
@@ -146,13 +168,17 @@ exports.getReports = async (req, res) => {
 
     const monthly = [];
     for (let i = trendCount - 1; i >= 0; i--) {
-      monthly.push({ month: monthLabel(monthStart(month, -i)), income: 0, expenses: 0 });
+      monthly.push({
+        month: monthLabel(monthStart(month, -i)),
+        income: 0,
+        expenses: 0,
+      });
     }
     monthlyRows.forEach((row) => {
-      const label = `${row._id.year}-${String(row._id.month).padStart(2, '0')}`;
+      const label = `${row._id.year}-${String(row._id.month).padStart(2, "0")}`;
       const entry = monthly.find((m) => m.month === label);
       if (entry) {
-        if (row._id.type === 'income') {
+        if (row._id.type === "income") {
           entry.income = round2(row.total);
         } else {
           entry.expenses = round2(row.total);
@@ -182,6 +208,6 @@ exports.getReports = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
